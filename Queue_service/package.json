@@ -1,0 +1,18 @@
+{
+  "name": "queue_service",
+  "version": "1.0.0",
+  "main": "email.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@sendgrid/mail": "^8.1.6",
+    "amqplib": "^0.10.9",
+    "express": "^5.1.0",
+    "ioredis": "^5.8.2"
+  }
+}

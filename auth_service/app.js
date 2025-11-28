@@ -1,5 +1,10 @@
 const mongoose = require('mongoose');
+const uuid = require('uuid');
 const cors = require('cors');
+
+const {send_mail} = require('../Queue_service/email');
+const {io_redis} = require('../Queue_service/redis');
+
 const express = require('express');
 const app = express();
 
@@ -55,24 +60,52 @@ app.post('/register',async (req,res)=>{
     
     const checkUser = await userModel.find({email});
     if(checkUser.length > 0){
-        return res.json({success:false,msg:'user found',redirectUrl:'/login'});
+        return res.json({success:false , msg:'user found' , redirectUrl:'/login'});
     }
+    let otp = Math.floor(100000 + Math.random() * 900000);
+    let uuid_token = uuid.v4();
+    await io_redis.set(`pending:${uuid_token}`,{username,email,password,otp});
 
+    let result = await send_mail({
+        to : email,
+        from : "anupbute23@gmail.com",
+        subject : "otp",
+        text : `${otp}`
+    });
+
+    if(result){
+        return res.json({success : true , token : `${uuid_token}` , redirectUrl : '/verify-otp'}).status(200);
+    }else{
+        io_redis.del(`pending:${uuid_token}`);
+        return res.json({success : false , msg : 'error' , redirectUrl : '/register'}).status(500);
+    }
+});
+
+app.post('/verify-otp',async (req,res)=>{
+
+    const {token , otp} = req.body;
+
+    let user_data = await io_redis.get(token);
+
+    if(!user_data.otp == otp){
+        io_redis.del(`pending:${token}`);
+        return res.json({success : false , msg : 'wrong otp' , redirectUrl : '/register'});
+    }
+    
     const newUser = new userModel({
-        username,
-        password,
-        email
+        username:user_data.username,
+        password:user_data.password,
+        email:user_data.email
     });
 
     try {
-        const result = await newUser.save();
-        return res.json({success:true , redirectUrl:'/login'})
+        await newUser.save();
+        return res.json({success:true , msg : 'register success' , redirectUrl:'/login'})
     } catch (error) {
         console.log(error);
-        return res.status(500).json({success:false , redirectUrl:'/register'});        
+        return res.status(500).json({success:false , msg : 'register fail' , redirectUrl:'/register'});        
     }
-
-});
+})
 
 app.post('/login',async (req,res)=>{
     const { email , password } = req.body;
