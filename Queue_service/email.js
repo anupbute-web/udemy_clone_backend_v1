@@ -1,8 +1,8 @@
 const sendgrid = require('@sendgrid/mail');
-const dotenv = require('dotenv');
-dotenv.config();
+require('dotenv').config();
 
-const api_Key =process.env.SENDGRID_API_KEY ;
+const api_Key = process.env.SENDGRID_API_KEY;
+console.log(api_Key)
 
 sendgrid.setApiKey(api_Key);
 
